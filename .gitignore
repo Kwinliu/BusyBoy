@@ -1,0 +1,14 @@
+.build/
+.DS_Store
+dist/
+.swiftpm/
+
+# Local development notes and sound/design auditions (not release material).
+docs/asset-generation.md
+docs/*-fix.md
+docs/button-*.wav
+docs/panel-options.png
+docs/world-clock-style.png
+scripts/preview-*.py
+.local/
+tmp/
