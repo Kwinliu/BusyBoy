@@ -15,10 +15,12 @@ private struct UtilityBackboard: View {
     @ObservedObject var settings: StickerSettings
     @ObservedObject var weather: WeatherModel
     @ObservedObject var pomodoro: PomodoroModel
+    @ObservedObject var clock: AlarmClockModel
     var close: () -> Void
     var chooseClockCity: (Int) -> Void
     var chooseWeatherCity: () -> Void
     var showTimerSettings: () -> Void
+    var showAlarmSettings: () -> Void
 
     var body: some View {
         MechanicalAssembly(deployment: lift.deployment, content: content)
@@ -27,7 +29,7 @@ private struct UtilityBackboard: View {
         switch lift.kind {
         case .clocks: WorldClocksView(settings: settings, close: close, chooseCity: chooseClockCity)
         case .weather: WeatherStickerView(settings: settings, model: weather, close: close, chooseCity: chooseWeatherCity)
-        case .pomodoro: PomodoroView(model: pomodoro, close: close, showSettings: showTimerSettings)
+        case .pomodoro: PomodoroView(model: pomodoro, clock: clock, close: close, showSettings: showTimerSettings, showAlarmSettings: showAlarmSettings)
         }
     }
 }
@@ -37,10 +39,13 @@ final class StickerPanelController: NSObject, NSWindowDelegate {
     let settings = StickerSettings()
     let weather = WeatherModel()
     let pomodoro = PomodoroModel()
+    let clock: AlarmClockModel
     let lift = LiftPresentation()
     private unowned let printer: NSWindow
     private let soundEnabled: () -> Bool
     private let audio = PrinterAudio()
+    private let alarmAudio = PrinterAudio()
+    private var alarmPanel: NSPanel?
     private var accessory: NSPanel?
     private var editor: NSPanel?
     private var isStowed = true
@@ -50,8 +55,12 @@ final class StickerPanelController: NSObject, NSWindowDelegate {
     private var userMovedDuringMotion = false
     private(set) var isPositioningPrinter = false
 
-    init(printer: NSWindow, soundEnabled: @escaping () -> Bool = { true }) {
+    init(printer: NSWindow, soundEnabled: @escaping () -> Bool = { true }, clock: AlarmClockModel? = nil) {
         self.printer = printer; self.soundEnabled = soundEnabled
+        self.clock = clock ?? AlarmClockModel()
+        super.init()
+        self.clock.onRing = { [weak self] in self?.showAlarmAlert() }
+        self.clock.onStop = { [weak self] in self?.closeAlarmAlert() }
     }
 
     func showClocks() { show(.clocks) }
@@ -97,11 +106,12 @@ final class StickerPanelController: NSObject, NSWindowDelegate {
     private func unfoldSurface() {
         guard isStowed, let accessory else { return }
         isStowed = false
-        let host = NSHostingView(rootView: UtilityBackboard(lift: lift, settings: settings, weather: weather, pomodoro: pomodoro,
+        let host = NSHostingView(rootView: UtilityBackboard(lift: lift, settings: settings, weather: weather, pomodoro: pomodoro, clock: clock,
             close: { [weak self] in self?.hide() },
             chooseClockCity: { [weak self] in self?.chooseClockCity($0) },
             chooseWeatherCity: { [weak self] in self?.chooseWeatherCity() },
-            showTimerSettings: { [weak self] in self?.showPomodoroSettings() }))
+            showTimerSettings: { [weak self] in self?.showPomodoroSettings() },
+            showAlarmSettings: { [weak self] in self?.showAlarmSettings() }))
         host.sizingOptions = []
         accessory.contentView = host
         accessory.setFrame(panelFrame(), display: true)
@@ -218,6 +228,35 @@ final class StickerPanelController: NSObject, NSWindowDelegate {
     func showPomodoroSettings() {
         showEditor(title: "BusyBoy 番茄钟设置", size: NSSize(width: 300, height: 220),
                    view: PomodoroSettingsView(model: pomodoro, close: { [weak self] in self?.closeEditor() }))
+    }
+    func showAlarmSettings() {
+        showEditor(title: "BusyBoy 闹钟设置", size: NSSize(width: 300, height: 264),
+                   view: AlarmSettingsView(model: clock, close: { [weak self] in self?.closeEditor() }))
+    }
+
+    private func showAlarmAlert() {
+        closeAlarmAlert()
+        let screen = printer.screen?.visibleFrame ?? NSScreen.main!.visibleFrame
+        let result = EntryPanel(contentRect: NSRect(x: screen.midX - 150, y: screen.midY - 110, width: 300, height: 220),
+                                styleMask: [.borderless], backing: .buffered, defer: false)
+        result.title = "BusyBoy 闹钟"
+        WindowPresentation.prepareInteractiveSurface(result)
+        result.hasShadow = true
+        result.hidesOnDeactivate = false
+        result.isFloatingPanel = false
+        result.level = .floating
+        result.isReleasedWhenClosed = false
+        result.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        result.contentView = NSHostingView(rootView: AlarmRingingView(model: clock))
+        alarmPanel = result
+        WindowPresentation.showEditor(result)
+        if clock.configuration.soundEnabled { alarmAudio.ringAlarm() }
+    }
+    private func closeAlarmAlert() {
+        alarmAudio.stop()
+        alarmPanel?.orderOut(nil)
+        alarmPanel?.contentView = nil
+        alarmPanel = nil
     }
     private func chooseClockCity(_ index: Int) {
         showEditor(title: "更换时钟城市", size: NSSize(width: 390, height: 410), view:

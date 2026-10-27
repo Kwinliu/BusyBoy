@@ -5,7 +5,7 @@ test_app="$PWD/.build/LiftChecks.app"
 mkdir -p "$test_app/Contents/MacOS"
 ./scripts/swift.sh --compile -swift-version 5 -parse-as-library \
   Sources/PaperTodo/StickerServices.swift Sources/PaperTodo/StickerUtilityViews.swift \
-  Sources/PaperTodo/Pomodoro.swift Sources/PaperTodo/Materials.swift Sources/PaperTodo/UtilityMaterials.swift \
+  Sources/PaperTodo/Pomodoro.swift Sources/PaperTodo/AlarmClock.swift Sources/PaperTodo/Materials.swift Sources/PaperTodo/UtilityMaterials.swift \
   Sources/PaperTodo/StickerPanelController.swift Sources/PaperTodo/PrinterAudio.swift Sources/PaperTodo/WindowPresentation.swift \
   Tests/LiftChecks.swift -o "$test_app/Contents/MacOS/LiftChecks"
 cat > "$test_app/Contents/Info.plist" <<'PLIST'

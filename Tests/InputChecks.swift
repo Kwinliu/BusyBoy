@@ -21,7 +21,8 @@ enum InputChecks {
         NSApp.deactivate()
         try await Task.sleep(for: .milliseconds(100))
         try require(!NSApp.isActive, "测试未能进入后台唤起前提")
-        let panel = TestEntryPanel(contentRect: NSRect(x: 400, y: 400, width: 568, height: 246),
+        let screen = NSScreen.main!.visibleFrame
+        let panel = TestEntryPanel(contentRect: NSRect(x: screen.midX - 284, y: screen.midY - 123, width: 568, height: 246),
                                    styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "BusyBoy input regression checks"
         panel.isReleasedWhenClosed = false
@@ -57,7 +58,7 @@ enum InputChecks {
         try await Task.sleep(for: .milliseconds(100))
         try require(field.string == "输入" && field.selectedRange().location == 2, "选词替换后文本或光标位置不正确")
         panel.orderOut(nil)
-        let printer = TestEntryPanel(contentRect: NSRect(x: 900, y: 400, width: 344, height: 280), styleMask: [.borderless], backing: .buffered, defer: false)
+        let printer = TestEntryPanel(contentRect: NSRect(x: screen.midX - 172, y: screen.midY - 140, width: 344, height: 280), styleMask: [.borderless], backing: .buffered, defer: false)
         printer.isReleasedWhenClosed = false
         defer { printer.orderOut(nil) }
         printer.level = WindowPresentation.printerLevel(alwaysOnTop: false)

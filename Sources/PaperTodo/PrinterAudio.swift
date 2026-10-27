@@ -57,6 +57,29 @@ final class PrinterAudio {
 
     func pressButton() { moveMechanism(opening: true, duration: 0.145) }
 
+    func ringAlarm() { playWave(Self.alarmWave(), volume: 0.55, looping: true) }
+
+    /// Three clean chimes, then a pause. Separate from the existing button sound.
+    static func alarmWave() -> Data {
+        let rate = 44100
+        let count = Int(2.5 * Double(rate))
+        var pcm = Data(capacity: count * 2)
+        for index in 0..<count {
+            let time = Double(index) / Double(rate)
+            var value = 0.0
+            for onset in [0.0, 0.32, 0.64] {
+                let age = time - onset
+                if age >= 0 {
+                    let envelope = min(1, age / 0.004) * exp(-age / 0.16)
+                    value += envelope * (sin(2 * .pi * 988 * age) * 0.27 + sin(2 * .pi * 1482 * age) * 0.08)
+                }
+            }
+            var sample = Int16(max(-0.95, min(0.95, value)) * 32767).littleEndian
+            withUnsafeBytes(of: &sample) { pcm.append(contentsOf: $0) }
+        }
+        return wave(pcm: pcm, rate: rate)
+    }
+
     /// A short shutter-style snap, followed by a quieter spring return.
     static func mechanismWave(opening: Bool, duration: Double) -> Data {
         let rate = 44100
@@ -110,10 +133,11 @@ final class PrinterAudio {
         return wave
     }
 
-    private func playWave(_ wave: Data, volume: Float) {
+    private func playWave(_ wave: Data, volume: Float, looping: Bool = false) {
         do {
             player = try AVAudioPlayer(data: wave, fileTypeHint: AVFileType.wav.rawValue)
             player?.volume = volume
+            player?.numberOfLoops = looping ? -1 : 0
             player?.prepareToPlay()
             player?.play()
         } catch { NSLog("PaperTodo: mechanical audio unavailable: %@", error.localizedDescription) }

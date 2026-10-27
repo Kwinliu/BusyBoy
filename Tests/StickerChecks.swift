@@ -56,6 +56,7 @@ enum StickerChecks {
         active.restoreSession(PomodoroSession(remainingSeconds: 75, mode: .focus, deadline: nil), now: date)
         try check(!active.isRunning && active.remainingSeconds == 75, "恢复时丢失暂停状态")
         print("PASS  番茄钟暂停、恢复、结束、重置")
+        try AlarmChecks.run()
         for step in 0...100 {
             let progress = CGFloat(step) / 100
             for right in [false, true] {

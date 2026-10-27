@@ -2,7 +2,7 @@
 
 把待办事项打印在桌面上的一卷热敏纸上。
 
-**macOS 14+ · Apple Silicon · SwiftUI + AppKit · v0.1.0**
+**macOS 14+ · Apple Silicon · SwiftUI + AppKit · v0.2.0**
 
 [下载 macOS 应用](https://github.com/Kwinliu/BusyBoy/releases/latest) · [图文使用说明](docs/USER_GUIDE.zh-CN.md) · [PDF 说明书](output/pdf/BusyBoy-User-Guide-zh-CN.pdf) · [反馈问题](https://github.com/Kwinliu/BusyBoy/issues)
 
@@ -19,13 +19,13 @@
 
 ## 安装
 
-1. 到 [Releases](https://github.com/Kwinliu/BusyBoy/releases/latest) 下载 `BusyBoy-v0.1.0-macOS-arm64.zip`。
+1. 到 [Releases](https://github.com/Kwinliu/BusyBoy/releases/latest) 下载 `BusyBoy-v0.2.0-macOS-arm64.zip`。
 2. 解压，将 `BusyBoy.app` 拖入“应用程序”，双击启动。
 3. 在桌面找到打印机，点击 `+` 或按 `Control + Option + Space` 写第一条待办。
 
 应用常驻菜单栏，不显示普通应用窗口或 Dock 图标。发行包目前只包含 Apple Silicon 版本。
 
-首个公开版本使用临时签名，尚未进行 Apple Developer ID 签名和公证。macOS 首次打开时可能显示来源检查提示，请先核对下载来源及 Release 中的 SHA-256 校验值，并参考 [Apple 的 App 打开说明](https://support.apple.com/zh-cn/102445)。
+当前发行版使用临时签名，尚未进行 Apple Developer ID 签名和公证。macOS 首次打开时可能显示来源检查提示，请先核对下载来源及 Release 中的 SHA-256 校验值，并参考 [Apple 的 App 打开说明](https://support.apple.com/zh-cn/102445)。
 
 ## 快速操作
 
@@ -53,6 +53,16 @@
 地球贴纸展开世界时钟，默认伦敦和墨西哥城，可更换城市。太阳云朵贴纸展开天气，默认长春，支持搜索城市。闹钟贴纸展开绿色数显番茄钟，支持专注 / 休息、暂停、重置和时长设置。
 
 截图均来自隔离的演示实例，内容为示例待办；天气与时钟数值会随时间变化。
+
+### 时钟与闹钟
+
+闹钟贴纸的数显面板新增“番茄 / 时钟 / 闹钟”三档。本地时钟显示时、分、秒；闹钟支持每天或单次、响铃、停止和稍后五分钟。切换不打断番茄倒计时。[操作说明](docs/CLOCK_AND_ALARM.zh-CN.md)
+
+状态、日期与重复方式均集中在绿屏数字左侧，数字下方不放文字。
+
+| 番茄 | 本地时钟 | 闹钟 |
+| --- | --- | --- |
+| ![番茄](docs/screenshots/pomodoro.jpg) | ![时钟](docs/screenshots/digital-clock.jpg) | ![闹钟](docs/screenshots/alarm.jpg) |
 
 ## 数据与隐私
 

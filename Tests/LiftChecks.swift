@@ -21,8 +21,14 @@ enum LiftChecks {
         printer.contentView = NSHostingView(rootView: Color.white.frame(width: 344, height: 420))
         WindowPresentation.showPrinter(printer)
         let original = printer.frame
-        let controller = StickerPanelController(printer: printer, soundEnabled: { false })
-        defer { controller.shutdown(); printer.orderOut(nil) }
+        let suite = "com.paperdesk.LiftAlarmChecks.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let alarm = AlarmClockModel(defaults: defaults, automaticTicks: false)
+        let controller = StickerPanelController(printer: printer, soundEnabled: { false }, clock: alarm)
+        defer {
+            alarm.stopRinging(); controller.shutdown(); printer.orderOut(nil)
+            defaults.removePersistentDomain(forName: suite)
+        }
         controller.install()
         try await Task.sleep(for: .milliseconds(100))
         let board = try requirePanel(printer.childWindows?.first, "背板未安装")
@@ -48,8 +54,15 @@ enum LiftChecks {
         print("SETTINGS physical=\(NSWindow.windowNumber(at: overlap, belowWindowWithWindowNumber: 0)) expected=\(editor.windowNumber), printer=\(printer.windowNumber), board=\(board.windowNumber), visible=\(editor.isVisible), frame=\(editor.frame), level=\(editor.level), children=\(printer.childWindows?.map { ($0.title, $0.windowNumber) } ?? [])")
         try require(NSWindow.windowNumber(at: overlap, belowWindowWithWindowNumber: 0) == editor.windowNumber, "番茄钟设置仍被打印机遮挡")
         try require(editor.level == .normal, "设置面板意外始终置顶")
+        controller.showAlarmSettings()
+        try await Task.sleep(for: .milliseconds(150))
+        let alarmEditor = try requirePanel(printer.childWindows?.first(where: { $0.title == "BusyBoy 闹钟设置" }), "未打开闹钟设置")
+        let alarmPoint = NSPoint(x: alarmEditor.frame.midX, y: alarmEditor.frame.midY)
+        try require(NSWindow.windowNumber(at: alarmPoint, belowWindowWithWindowNumber: 0) == alarmEditor.windowNumber, "闹钟设置被打印机遮挡")
+        controller.showPomodoroSettings()
+        let timerEditor = try requirePanel(printer.childWindows?.first(where: { $0.title == "BusyBoy 番茄钟设置" }), "未恢复番茄钟设置")
         printer.level = .floating; controller.syncLevel()
-        try require(board.level == .floating && editor.level == .floating, "显式置顶后面板层级未同步")
+        try require(board.level == .floating && timerEditor.level == .floating, "显式置顶后面板层级未同步")
         printer.level = .normal; controller.syncLevel()
         controller.hide()
         try await Task.sleep(for: .milliseconds(120))
@@ -69,9 +82,23 @@ enum LiftChecks {
         try require(!board.isVisible, "隐藏打印机后仍留下背板")
         controller.resume()
         try require(board.isVisible && board.ignoresMouseEvents, "隐藏恢复后背板状态异常")
+        controller.suspend(); printer.orderOut(nil)
+        let now = Date()
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: now.addingTimeInterval(60))
+        alarm.configure(hour: parts.hour!, minute: parts.minute!, repeatsDaily: false, enabled: true, soundEnabled: false, now: now)
+        alarm.tick(now: alarm.nextFire!)
+        try await Task.sleep(for: .milliseconds(100))
+        let alert = try requirePanel(NSApp.windows.first(where: { $0.title == "BusyBoy 闹钟" && $0.isVisible }), "隐藏打印机时闹钟没有弹出")
+        let alertPoint = NSPoint(x: alert.frame.midX, y: alert.frame.midY)
+        let frontWindow = NSWindow.windowNumber(at: alertPoint, belowWindowWithWindowNumber: 0)
+        print("ALARM physical=\(frontWindow) expected=\(alert.windowNumber), level=\(alert.level), key=\(alert.isKeyWindow)")
+        try require(alert.level == .floating && frontWindow == alert.windowNumber, "闹钟提醒没有出现在前台")
+        alarm.stopRinging()
+        try require(!alert.isVisible && !alarm.isRinging, "停止闹钟后提醒窗口未收起")
         print("PASS  背板露头、上方展开、同尺寸与连续反向收放")
         print("PASS  番茄钟设置实际鼠标命中位于打印机前方，置顶同步")
         print("PASS  临时让位恢复、手动位置保留与隐藏恢复")
+        print("PASS  闹钟设置前置，打印机隐藏时仍弹出到点提醒，停止后收起")
     }
     static func require(_ condition: Bool, _ message: String) throws { if !condition { throw LiftFailure(description: message) } }
     static func requirePanel(_ panel: NSWindow?, _ message: String) throws -> NSWindow {
